@@ -27,6 +27,9 @@ test_data = pd.read_csv('dataset/BBC News Test.csv')
 # Transform the data into a single dataset
 data = pd.concat([train_data,test_data])
 data.to_csv('dataset/data.csv', index=False)
+
+# Remove duplicated data
+data = data.drop_duplicates(subset=['Text','Category'])
 data.head(10)
 
 
@@ -45,16 +48,10 @@ data.groupby(['Category']).size().sort_values(ascending=True)
 # In[5]:
 
 
-data.groupby(['Category']).size().plot(kind='pie', figsize=(10, 6))
-
-
-# In[6]:
-
-
 data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[7]:
+# In[6]:
 
 
 # Remove all punctuations from the text
@@ -67,7 +64,7 @@ data['removed_punc'] = data['Text'].apply(lambda x: remove_punct(x))
 data.head()
 
 
-# In[8]:
+# In[7]:
 
 
 # Convert text to lower case tokens
@@ -81,7 +78,7 @@ data['tokens'] = data['removed_punc'].apply(lambda msg : tokenize(msg))
 data.head()
 
 
-# In[9]:
+# In[8]:
 
 
 # Remove tokens of length less than 3
@@ -92,7 +89,7 @@ data['larger_tokens'] = data['tokens'].apply(lambda x : remove_small_words(x))
 data.head()
 
 
-# In[10]:
+# In[9]:
 
 
 # Remove stopwords by using NLTK corpus list
@@ -103,7 +100,7 @@ data['clean_tokens'] = data['larger_tokens'].apply(lambda x : remove_stopwords(x
 data.head()
 
 
-# In[11]:
+# In[10]:
 
 
 # Apply lemmatization on tokens
@@ -117,7 +114,7 @@ data['lemma_words'] = data['clean_tokens'].apply(lambda x : lemmatize(x))
 data.head()
 
 
-# In[12]:
+# In[11]:
 
 
 # Create sentences to get clean text as input for vectors
@@ -130,7 +127,7 @@ data.head()
 
 # ### Model and Evaluation Phase
 
-# In[13]:
+# In[12]:
 
 
 import numpy as np
@@ -146,7 +143,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-# In[14]:
+# In[13]:
 
 
 # Balancing the dataset to have the same number of documents for each query
@@ -166,34 +163,29 @@ def balance_data(data, category_col):
     return pd.concat(balanced_data)
 
 
-# In[15]:
+# In[14]:
 
 
-balanced_data = balance_data(data, 'Category')
+data = balance_data(data, 'Category')
+balanced_data = data[['clean_text', 'Category']]
 X_train, X_test, y_train, y_test = train_test_split(balanced_data['clean_text'], balanced_data['Category'], test_size=0.2, random_state=42)
 balanced_data.groupby(['Category']).size().sort_values(ascending=True)
 
 
-# In[16]:
-
-
-balanced_data.groupby(['Category']).size().plot(kind='pie', figsize=(10, 6))
-
-
-# In[17]:
+# In[15]:
 
 
 balanced_data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[18]:
+# In[16]:
 
 
 vectorizer = TfidfVectorizer()
 document_vectors = vectorizer.fit_transform(balanced_data['clean_text'])
 
 
-# In[19]:
+# In[17]:
 
 
 topics = {
@@ -214,7 +206,7 @@ topics = {
 }
 
 
-# In[20]:
+# In[18]:
 
 
 users = [
@@ -231,95 +223,66 @@ users = [
 ]
 
 
-# In[21]:
+# In[19]:
 
 
-# Step 1: Create a dictionary with user interests as keys and user IDs as values
-interests_users = {}
-for user in users:
-    user_id = user['id']
-    for interest in user['interests']:
-        if interest not in interests_users:
-            interests_users[interest] = [user_id]
-        else:
-            interests_users[interest].append(user_id)
-
-# Step 2: Convert user interests into interest vectors using the vectorizer
-interest_vectors = {}
-for interest, keywords in topics.items():
-    interest_vector = vectorizer.transform([' '.join(keywords)])
-    interest_vectors[interest] = interest_vector
-
-# Step 3: Calculate cosine similarity between the document and interest vectors
-def recommend_users(doc_vector, interest_vectors, interests_users, threshold=0.1):
-    recommended_users = set()
-    for interest, interest_vector in interest_vectors.items():
-        similarity = cosine_similarity(doc_vector, interest_vector)
-        if similarity >= threshold:
-            recommended_users.update(interests_users[interest])
-    return recommended_users
-
-# Step 4: Recommend documents to users based on their cosine similarity scores
-doc_recommendations = {}
-for index, row in data.iterrows():
-    doc_vector = vectorizer.transform([row['clean_text']])
-    recommended_users = recommend_users(doc_vector, interest_vectors, interests_users)
-    doc_recommendations[row['Text']] = recommended_users
-
-print(doc_recommendations)
+vec_user1 = vectorizer.transform([" ".join(users[0]['interests'])])
+vec_user2 = vectorizer.transform([" ".join(users[1]['interests'])])
+vec_user3 = vectorizer.transform([" ".join(users[2]['interests'])])
+vec_user4 = vectorizer.transform([" ".join(users[3]['interests'])])
+vec_user5 = vectorizer.transform([" ".join(users[4]['interests'])])
+vec_user6 = vectorizer.transform([" ".join(users[5]['interests'])])
+vec_user7 = vectorizer.transform([" ".join(users[6]['interests'])])
+vec_user8 = vectorizer.transform([" ".join(users[7]['interests'])])
+vec_user9 = vectorizer.transform([" ".join(users[8]['interests'])])
+vec_user10 = vectorizer.transform([" ".join(users[9]['interests'])])
 
 
-# In[22]:
+# In[20]:
 
 
-# Step 1: Create topic vectors
-topic_vectors = {}
+lista_vecs = []
+lista_vecs.append(vec_user1)
+lista_vecs.append(vec_user2)
+lista_vecs.append(vec_user3)
+lista_vecs.append(vec_user4)
+lista_vecs.append(vec_user5)
+lista_vecs.append(vec_user6)
+lista_vecs.append(vec_user7)
+lista_vecs.append(vec_user8)
+lista_vecs.append(vec_user9)
+lista_vecs.append(vec_user10)
 
-for topic, words in topics.items():
-    topic_vectors[topic] = np.mean(vectorizer.transform(words), axis=0)
 
-# Step 2: Create user profile vectors
-def create_user_profile(user_interests):
-    user_profile = np.zeros((1, document_vectors.shape[1]))
-    for interest in user_interests:
-        user_profile += topic_vectors[interest]
-    user_profile /= len(user_interests)
-    return user_profile
+# In[34]:
 
-for user in users:
-    user['profile'] = create_user_profile(user['interests'])
 
-# Step 3: Calculate the cosine similarity between each document and user profile
-def get_similar_documents(user_profile, threshold=0.5):
-    similarities = cosine_similarity(document_vectors, user_profile)
-    return np.where(similarities >= threshold)[0]
+import random
 
-# Step 4: Match documents to users based on a threshold
-matched_documents = {}
+for i in range(10):
+  min_length = min(len(balanced_data['clean_text']), document_vectors.shape[0])
+  random_index = random.randint(0, min_length - 1) 
+  incoming_doc_vector = document_vectors[random_index]
+  list_sim = []
 
-for user in users:
-    matched_documents[user['id']] = get_similar_documents(user['profile'])
+  profiles = []
 
-# Step 5: Test the accuracy/performance of the approach
-# In this case, we assume that you have a ground truth dataset of which documents should be matched to each user.
-# You can compare this with the `matched_documents` to get the accuracy or other performance metrics.
+  for j in range(len(lista_vecs)):
+    similarities = cosine_similarity(incoming_doc_vector, lista_vecs[j]) 
+    if similarities[0][0] > 0.0:
+      profiles.append(j+1)
+      list_sim.append(similarities[0][0])
+  
+  print("For document",i+1, ":", balanced_data['clean_text'].iloc[random_index])
+  print("Categorized as: "+ balanced_data['Category'].iloc[random_index]+ ' topic.')
+  print("The user who are interested in this document are", profiles)
+  print()
 
-ground_truth = {
-    1: set([2, 5, 6]),  # Example of ground truth document IDs for user 1
-    # Add ground truth for other users
-}
-
-def get_accuracy(ground_truth, matched_documents):
-    correct_matches = 0
-    total_matches = 0
-
-    for user_id, truth in ground_truth.items():
-        predicted = set(matched_documents[user_id])
-        correct_matches += len(truth.intersection(predicted))
-        total_matches += len(predicted)
-
-    return correct_matches / total_matches
-
-accuracy = get_accuracy(ground_truth, matched_documents)
-print(f"Accuracy: {accuracy:.2f}")
+  print("RANKING")
+  ranking = pd.DataFrame()
+  ranking["Users"] = profiles
+  ranking["Score"] = list_sim
+  ranking = ranking.sort_values('Score', ascending=False)
+  print(ranking)
+  print()
 
