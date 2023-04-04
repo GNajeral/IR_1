@@ -133,7 +133,7 @@ data.head()
 import numpy as np
 import sklearn
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
@@ -168,7 +168,6 @@ def balance_data(data, category_col):
 
 data = balance_data(data, 'Category')
 balanced_data = data[['clean_text', 'Category']]
-X_train, X_test, y_train, y_test = train_test_split(balanced_data['clean_text'], balanced_data['Category'], test_size=0.2, random_state=42)
 balanced_data.groupby(['Category']).size().sort_values(ascending=True)
 
 
@@ -181,7 +180,9 @@ balanced_data.groupby(['Category']).size().sort_values(ascending=True).plot(kind
 # In[16]:
 
 
-vectorizer = TfidfVectorizer()
+#vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_df=0.9, min_df=5)
+#vectorizer = TfidfVectorizer(norm='l2', use_idf=False)
+vectorizer = TfidfVectorizer(stop_words='english')
 document_vectors = vectorizer.fit_transform(balanced_data['clean_text'])
 
 
@@ -189,20 +190,47 @@ document_vectors = vectorizer.fit_transform(balanced_data['clean_text'])
 
 
 topics = {
-    # Sports
-    'sports': ["sports", "championship", "soccer", "race", "football", "tennis", "baseball", "hockey", "basketball", "athletics", "rugby", "swimming", "golf", "cycling", "cricket", "marathon", "gymnastics", "boxing", "volleyball", "badminton", "fencing", "wrestling", "snowboarding", "skiing", "horse-racing", "archery", "table-tennis", "e-sports", "fitness", "olympics"],
+    # Sport
+    'sport': ['sport', 'game', 'year', 'first', 'player', 'world', 'england', 'time', 'play', 'match', 'team', 'side',
+              'second', 'champion', 'good', 'three', 'week', 'ireland', 'final', 'coach', 'injury', 'season', 'club',
+              'france', 'wale', 'people', 'rugby', 'open', 'great', 'nation', 'month', 'point', 'united', 'title', 
+              'minute', 'start', 'victory', 'chance', 'chelsea', 'international', 'played', 'scotland', 'best', 'home', 
+              'league', 'championship', 'five', 'olympic', 'face', 'goal', 'playing', 'record', 'arsenal', 'country',
+              'decision', 'place', 'test', 'manager', 'race', 'break', 'return', 'grand', 'beat', 'european', 'four',
+              'away', 'former', 'service', 'third'],
     
     # Business
-    'business': ["business", "finance", "stocks", "economy", "investment", "entrepreneurship", "corporation", "market", "trade", "revenue", "profit", "startup", "loss", "growth", "acquisition", "tax", "debt", "funding", "venture", "capital", "inflation", "interest", "dividends", "corporate", "management", "banking", "insurance", "real-estate", "franchise", "supply-chain"],
+    'business': ['business', 'year', 'company', 'firm', 'market', 'country', 'government', 'sale', 'bank', 'price', 
+                 'economy', 'growth', 'month', 'share', 'economic', 'world', 'rate', 'people', 'time', 'analyst', 
+                 'chief', 'first', 'deal', 'profit', 'dollar', 'rise', 'china', 'euro', 'offer', 'cost', 'plan', 
+                 'executive', 'group', 'make', 'three', 'week', 'figure', 'financial', 'minister', 'report', 
+                 'investment', 'stock', 'many', 'india', 'yukos', 'interest', 'high', 'state', 'debt', 'demand', 
+                 'european', 'well', 'trade', 'foreign', 'million', 'move', 'strong', 'director', 'president', 'good',
+                 'industry', 'number', 'quarter', 'budget', 'fall', 'former', 'news', 'work', 'money', 'need', 'investor'],
     
     # Entertainment
-    'entertainment': ["entertainment", "movies", "music", "television", "celebrities", "awards", "festivals", "concert", "theater", "comedy", "drama", "action", "romance", "animation", "documentary", "dance", "art", "literature", "photography", "sculpture", "painting", "opera", "magic", "circus", "museum", "exhibition", "actor", "actress", "singer", "culture"],
+    'entertainment': ['entertainment', 'film', 'year', 'best', 'award', 'people', 'show', 'music', 'star', 'time', 
+                      'number', 'actor', 'band', 'director', 'world', 'album', 'like', 'company', 'sale', 'million', 
+                      'government', 'oscar', 'song', 'chart', 'home', 'record', 'movie', 'role', 'actress', 'place',
+                      'play', 'right', 'week', 'single', 'game', 'group', 'life', 'singer', 'work', 'prize', 'country',
+                      'industry', 'good', 'festival', 'nomination', 'party', 'money', 'child', 'office', 'comedy', 'rock', 
+                      'winner', 'series', 'book', 'woman', 'producer', 'news', 'love', 'performance', 'musical'],
     
     # Politics
-    'politics': ["politics", "government", "elections", "policy", "democracy", "president", "parliament", "vote", "prime-minister", "congress", "senate", "international", "relations", "diplomacy", "referendum", "constitution", "legislation", "political-party", "campaign", "debate", "rights", "protest", "activism", "military", "intelligence", "treaty", "embassy", "visa", "immigration", "trade-agreements"],
+    'politics': ['politics', 'labour', 'people', 'government', 'party', 'election', 'year', 'blair', 'minister', 'tory',
+                 'plan', 'time', 'brown', 'lord', 'country', 'public', 'home', 'issue', 'leader', 'right', 'game', 'secretary', 
+                 'general', 'service', 'prime', 'week', 'world', 'change', 'campaign', 'like', 'conservative', 'bill', 'spokesman',
+                 'chancellor', 'police', 'report', 'child', 'claim', 'council', 'power', 'vote', 'need', 'liberal', 'democrat', 
+                 'case', 'policy', 'member', 'court', 'problem', 'european', 'group', 'former', 'house', 'help', 'local', 'system',
+                 'decision', 'school', 'kennedy', 'news', 'office', 'place', 'state'],
     
     # Tech
-    'tech': ["tech", "technology", "innovation", "gadgets", "smartphone", "artificial-intelligence", "robotics", "software", "hardware", "computer", "internet", "cybersecurity", "virtual-reality", "augmented-reality", "machine-learning", "data-science", "blockchain", "cryptocurrency", "internet-of-things", "cloud-computing", "big-data", "quantum-computing", "networking", "operating-system", "mobile-apps", "programming", "research", "drones", "3D-printing", "wearables"]
+    'tech': ['tech', 'technology', 'people', 'year', 'game', 'mobile', 'phone', 'service', 'firm', 'user', 'time', 'music', 'first',
+             'company', 'computer', 'software', 'system', 'world', 'like', 'digital', 'number', 'million', 'network', 'used', 'player',
+             'market', 'work', 'online', 'consumer', 'microsoft', 'site', 'internet', 'device', 'month', 'broadband', 'website', 'video',
+             'gadget', 'show', 'data', 'home', 'information', 'medium', 'machine', 'search', 'security', 'european', 'content', 'research',
+             'report', 'group', 'news', 'help', 'virus', 'industry', 'problem', 'email', 'mean', 'program', 'message', 'play', 'camera', 
+             'different', 'three', 'apple', 'europe', 'offer', 'sale']
 }
 
 
@@ -210,79 +238,156 @@ topics = {
 
 
 users = [
-    {'id': 1, 'interests': ['sports']},
-    {'id': 2, 'interests': ['business']},
-    {'id': 3, 'interests': ['entertainment']},
-    {'id': 4, 'interests': ['politics']},
-    {'id': 5, 'interests': ['tech']},
-    {'id': 6, 'interests': ['sports', 'business']},
-    {'id': 7, 'interests': ['entertainment', 'politics']},
-    {'id': 8, 'interests': ['tech', 'sports']},
-    {'id': 9, 'interests': ['business', 'entertainment']},
-    {'id': 10, 'interests': ['politics', 'tech', 'business']}
+    {'id': 1, 'interests': topics['sport']},
+    {'id': 2, 'interests': topics['business']},
+    {'id': 3, 'interests': topics['entertainment']},
+    {'id': 4, 'interests': topics['politics']},
+    {'id': 5, 'interests': topics['tech']},
+    {'id': 6, 'interests': topics['sport'] + topics['business']},
+    {'id': 7, 'interests': topics['entertainment'] + topics['politics']},
+    {'id': 8, 'interests': topics['tech'] + topics['sport']},
+    {'id': 9, 'interests': topics['business'] + topics['entertainment']},
+    {'id': 10, 'interests': topics['politics'] + topics['tech'] + topics['business']}
 ]
 
+
+# Simple way of creating the users
 
 # In[19]:
 
 
-vec_user1 = vectorizer.transform([" ".join(users[0]['interests'])])
-vec_user2 = vectorizer.transform([" ".join(users[1]['interests'])])
-vec_user3 = vectorizer.transform([" ".join(users[2]['interests'])])
-vec_user4 = vectorizer.transform([" ".join(users[3]['interests'])])
-vec_user5 = vectorizer.transform([" ".join(users[4]['interests'])])
-vec_user6 = vectorizer.transform([" ".join(users[5]['interests'])])
-vec_user7 = vectorizer.transform([" ".join(users[6]['interests'])])
-vec_user8 = vectorizer.transform([" ".join(users[7]['interests'])])
-vec_user9 = vectorizer.transform([" ".join(users[8]['interests'])])
-vec_user10 = vectorizer.transform([" ".join(users[9]['interests'])])
+# user_vectors = []
+# for user in users:
+#     interests = " ".join(user['interests'])
+#     vector = vectorizer.transform([interests])
+#     user_vectors.append(vector)
 
+# lista_vecs = [user_vectors[i] for i in range(len(user_vectors))]
+
+
+# Creating the users by using the mean/max function
 
 # In[20]:
 
 
-lista_vecs = []
-lista_vecs.append(vec_user1)
-lista_vecs.append(vec_user2)
-lista_vecs.append(vec_user3)
-lista_vecs.append(vec_user4)
-lista_vecs.append(vec_user5)
-lista_vecs.append(vec_user6)
-lista_vecs.append(vec_user7)
-lista_vecs.append(vec_user8)
-lista_vecs.append(vec_user9)
-lista_vecs.append(vec_user10)
+# import numpy as np
+# from scipy.sparse import csr_matrix
+
+# def aggregate_vectors(vectors):
+#     return np.mean(vectors, axis=0)
+
+# def max_aggregate_vectors(vectors):
+#     return np.max(vectors, axis=0)
+
+# user_vectors = []
+# for user in users:
+#     topic_vectors = []
+#     for topic in user['interests']:
+#         topic_vector = vectorizer.transform([topic]).toarray()
+#         topic_vectors.append(topic_vector)
+#     user_vector = max_aggregate_vectors(topic_vectors)
+#     user_vectors.append(user_vector)
+
+# user_vectors_sparse = [csr_matrix(user_vector) for user_vector in user_vectors]
+
+# lista_vecs = user_vectors_sparse
 
 
-# In[34]:
+# #### Creating the users by using the Weighted Topic Frequency (WTF) method
+# 
+# This a creative approach for constructing user vectors that takes into account the uniqueness of each topic for the user.
+# 
+# 1. Calculate the term frequency (TF) for each word in the user's interests.
+# 2. Calculate the inverse topic frequency (ITF) for each word across all topics.
+# 3. Calculate the Weighted Topic Frequency (WTF) for each word by multiplying its TF by its ITF.
+# 4. Create the user vector by using the WTF values for each word in the user's interests.
+# 
+# Here's a step-by-step explanation:
+# 
+# 1. Term Frequency (TF): Count the frequency of each word in the user's interests and normalize it by the total number of words in the user's interests.
+# 
+# 2. Inverse Topic Frequency (ITF): For each word in the user's interests, calculate its presence in all topics. Then, compute the inverse of this presence (total number of topics / number of topics containing the word). This will give higher weights to words that are more unique to a user's interests.
+# 
+# 3. Weighted Topic Frequency (WTF): Multiply the TF and ITF for each word to obtain the WTF value. This will emphasize words that are both frequent in the user's interests and unique to their topics.
+# 
+# 4. User vector creation: Use the WTF values for each word in the user's interests to create the user vector. This can be done by transforming the user's interests (with WTF values) using the vectorizer.transform() function.
+
+# In[21]:
 
 
-import random
+from collections import Counter
 
-for i in range(10):
-  min_length = min(len(balanced_data['clean_text']), document_vectors.shape[0])
-  random_index = random.randint(0, min_length - 1) 
-  incoming_doc_vector = document_vectors[random_index]
-  list_sim = []
+def calculate_tf(user_interests):
+    word_count = Counter(user_interests)
+    total_words = len(user_interests)
+    tf = {word: count / total_words for word, count in word_count.items()}
+    return tf
 
-  profiles = []
+def calculate_itf(user_interests, topics):
+    num_topics = len(topics)
+    topic_presence = {word: 0 for word in user_interests}
+    
+    for topic_words in topics.values():
+        for word in set(user_interests):
+            if word in topic_words:
+                topic_presence[word] += 1
+    
+    itf = {word: np.log(num_topics / presence) for word, presence in topic_presence.items()}
+    return itf
 
-  for j in range(len(lista_vecs)):
-    similarities = cosine_similarity(incoming_doc_vector, lista_vecs[j]) 
-    if similarities[0][0] > 0.0:
-      profiles.append(j+1)
-      list_sim.append(similarities[0][0])
-  
-  print("For document",i+1, ":", balanced_data['clean_text'].iloc[random_index])
-  print("Categorized as: "+ balanced_data['Category'].iloc[random_index]+ ' topic.')
-  print("The user who are interested in this document are", profiles)
-  print()
+def calculate_wtf(user_interests, topics):
+    tf = calculate_tf(user_interests)
+    itf = calculate_itf(user_interests, topics)
+    wtf = {word: tf[word] * itf[word] for word in user_interests}
+    return wtf
 
-  print("RANKING")
-  ranking = pd.DataFrame()
-  ranking["Users"] = profiles
-  ranking["Score"] = list_sim
-  ranking = ranking.sort_values('Score', ascending=False)
-  print(ranking)
-  print()
+user_vectors = []
+for user in users:
+    wtf = calculate_wtf(user['interests'], topics)
+    weighted_interests = " ".join([word for word, weight in wtf.items() for _ in range(int(weight * 100))])
+    user_vector = vectorizer.transform([weighted_interests])
+    user_vectors.append(user_vector)
+
+lista_vecs = [user_vectors[i] for i in range(len(user_vectors))]
+
+
+# In[22]:
+
+
+for user in lista_vecs:
+    print(user)
+
+
+# In[23]:
+
+
+predictions = []
+predictions2 = []
+for i in range(0, len(lista_vecs)):
+    match = 0
+    best_similarity = -1
+    for j in range(0, document_vectors.shape[0]):
+        document = document_vectors[j]
+        similarity = cosine_similarity(document, lista_vecs[i])
+        if similarity > best_similarity:
+            best_similarity = similarity
+            match = j
+    predictions.append(balanced_data.iloc[match]['Category'])
+    predictions2.append(balanced_data.iloc[match]['clean_text'])
+
+
+# In[27]:
+
+
+correct_predictions = 0
+for category, text, user in zip(predictions, predictions2, users):
+    print()
+    print("User: ", user['id'])
+    print("Category Predicted: ", category)
+    print("Recommended Text: ", text)
+    print("User's Interests: ", user['interests'])
+    if category == user['interests'][0]:
+        correct_predictions += 1
+
+print("\nAccuracy: ", correct_predictions/len(users))
 
