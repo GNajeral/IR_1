@@ -7,7 +7,7 @@
 
 # ### Preprocessing Phase
 
-# In[1]:
+# In[26]:
 
 
 import nltk
@@ -15,7 +15,7 @@ import nltk
 nltk.download('all')
 
 
-# In[2]:
+# In[27]:
 
 
 # Read the data
@@ -33,25 +33,25 @@ data = data.drop_duplicates(subset=['Text','Category'])
 data.head(10)
 
 
-# In[3]:
+# In[28]:
 
 
 data.shape
 
 
-# In[4]:
+# In[29]:
 
 
 data.groupby(['Category']).size().sort_values(ascending=True)
 
 
-# In[5]:
+# In[30]:
 
 
 data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[6]:
+# In[31]:
 
 
 # Remove all punctuations from the text
@@ -64,7 +64,7 @@ data['removed_punc'] = data['Text'].apply(lambda x: remove_punct(x))
 data.head()
 
 
-# In[7]:
+# In[32]:
 
 
 # Convert text to lower case tokens
@@ -78,7 +78,7 @@ data['tokens'] = data['removed_punc'].apply(lambda msg : tokenize(msg))
 data.head()
 
 
-# In[8]:
+# In[33]:
 
 
 # Remove tokens of length less than 3
@@ -89,7 +89,7 @@ data['larger_tokens'] = data['tokens'].apply(lambda x : remove_small_words(x))
 data.head()
 
 
-# In[9]:
+# In[34]:
 
 
 # Remove stopwords by using NLTK corpus list
@@ -100,7 +100,7 @@ data['clean_tokens'] = data['larger_tokens'].apply(lambda x : remove_stopwords(x
 data.head()
 
 
-# In[10]:
+# In[35]:
 
 
 # Apply lemmatization on tokens
@@ -114,7 +114,7 @@ data['lemma_words'] = data['clean_tokens'].apply(lambda x : lemmatize(x))
 data.head()
 
 
-# In[11]:
+# In[36]:
 
 
 # Create sentences to get clean text as input for vectors
@@ -125,25 +125,9 @@ data['clean_text'] = data['lemma_words'].apply(lambda x : return_sentences(x))
 data.head()
 
 
-# ### Model and Evaluation Phase
+# ### User's Creation and Documents' Encoding
 
-# In[12]:
-
-
-import numpy as np
-import sklearn
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics.pairwise import cosine_similarity
-
-
-# In[13]:
+# In[37]:
 
 
 # Balancing the dataset to have the same number of documents for each query
@@ -163,7 +147,7 @@ def balance_data(data, category_col):
     return pd.concat(balanced_data)
 
 
-# In[14]:
+# In[38]:
 
 
 data = balance_data(data, 'Category')
@@ -171,22 +155,23 @@ balanced_data = data[['clean_text', 'Category']]
 balanced_data.groupby(['Category']).size().sort_values(ascending=True)
 
 
-# In[15]:
+# In[39]:
 
 
 balanced_data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[16]:
+# In[40]:
 
 
+from sklearn.feature_extraction.text import TfidfVectorizer
 #vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_df=0.9, min_df=5)
 #vectorizer = TfidfVectorizer(norm='l2', use_idf=False)
 vectorizer = TfidfVectorizer(stop_words='english')
 document_vectors = vectorizer.fit_transform(balanced_data['clean_text'])
 
 
-# In[17]:
+# In[41]:
 
 
 topics = {
@@ -234,7 +219,7 @@ topics = {
 }
 
 
-# In[18]:
+# In[42]:
 
 
 users = [
@@ -253,7 +238,7 @@ users = [
 
 # Simple way of creating the users
 
-# In[19]:
+# In[43]:
 
 
 # user_vectors = []
@@ -267,7 +252,7 @@ users = [
 
 # Creating the users by using the mean/max function
 
-# In[20]:
+# In[44]:
 
 
 # import numpy as np
@@ -312,9 +297,10 @@ users = [
 # 
 # 4. User vector creation: Use the WTF values for each word in the user's interests to create the user vector. This can be done by transforming the user's interests (with WTF values) using the vectorizer.transform() function.
 
-# In[21]:
+# In[45]:
 
 
+import numpy as np
 from collections import Counter
 
 def calculate_tf(user_interests):
@@ -351,15 +337,17 @@ for user in users:
 lista_vecs = [user_vectors[i] for i in range(len(user_vectors))]
 
 
-# In[22]:
+# In[46]:
 
 
 for user in lista_vecs:
     print(user)
 
 
-# In[23]:
+# In[47]:
 
+
+from sklearn.metrics.pairwise import cosine_similarity
 
 predictions = []
 predictions2 = []
@@ -376,7 +364,7 @@ for i in range(0, len(lista_vecs)):
     predictions2.append(balanced_data.iloc[match]['clean_text'])
 
 
-# In[27]:
+# In[48]:
 
 
 correct_predictions = 0
@@ -390,4 +378,143 @@ for category, text, user in zip(predictions, predictions2, users):
         correct_predictions += 1
 
 print("\nAccuracy: ", correct_predictions/len(users))
+
+
+# ### System Evaluation
+
+# To calculate the accuracy, precision, recall, F-Measure, and AU-ROC, we'll need to modify the code to make it suitable for a multi-label classification problem. Since the user interests are not limited to one category, we'll create binary classifiers for each category and then calculate the mentioned metrics for each classifier.
+
+# In[49]:
+
+
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+
+# Create binary classifiers for each category
+categories = list(topics.keys())
+category_classifiers = {category: (document_vectors, (balanced_data['Category'] == category).astype(int)) for category in categories}
+
+# Calculate metrics for each user
+all_true_labels = []
+all_predicted_labels = []
+
+for user in users:
+    true_labels = [1 if interest in user['interests'] else 0 for interest in categories]
+    predicted_labels = []
+
+    for category in categories:
+        classifier_data, category_labels = category_classifiers[category]
+        best_similarity = -1
+        match_index = -1
+
+        for j in range(0, classifier_data.shape[0]):
+            document = classifier_data[j]
+            similarity = cosine_similarity(document, user_vectors[user['id'] - 1])
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                match_index = j
+
+        predicted_label = category_labels.iloc[match_index]
+        predicted_labels.append(predicted_label)
+
+    all_true_labels.append(true_labels)
+    all_predicted_labels.append(predicted_labels)
+
+all_true_labels = np.array(all_true_labels)
+all_predicted_labels = np.array(all_predicted_labels)
+
+# Calculate accuracy, precision, recall, F-Measure, and AU-ROC
+accuracy = accuracy_score(all_true_labels, all_predicted_labels)
+precision = precision_score(all_true_labels, all_predicted_labels, average='micro')
+recall = recall_score(all_true_labels, all_predicted_labels, average='micro')
+f_measure = f1_score(all_true_labels, all_predicted_labels, average='micro')
+au_roc = roc_auc_score(all_true_labels, all_predicted_labels, average='micro')
+
+print("Accuracy: ", accuracy)
+print("Precision: ", precision)
+print("Recall: ", recall)
+print("F-Measure: ", f_measure)
+print("AU-ROC: ", au_roc)
+
+
+# In[50]:
+
+
+from sklearn.metrics import classification_report, multilabel_confusion_matrix
+
+# Calculate classification report and confusion matrix
+class_report = classification_report(all_true_labels, all_predicted_labels, target_names=categories, zero_division=0)
+conf_matrix = multilabel_confusion_matrix(all_true_labels, all_predicted_labels)
+
+print("Classification Report:\n", class_report)
+print("Confusion Matrix:\n")
+
+for i, category in enumerate(categories):
+    print(f"{category}:\n")
+    print(conf_matrix[i])
+    print()
+
+
+# In[51]:
+
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+
+# Function to plot ROC curve for each category
+def plot_roc_curve(true_labels, predicted_labels, category, ax):
+    fpr, tpr, _ = roc_curve(true_labels, predicted_labels)
+    roc_auc = auc(fpr, tpr)
+
+    ax.plot(fpr, tpr,
+             lw=2, label=f'{category} (area = {roc_auc:.2f})')
+    
+# Set up the figure and axis for the plot
+fig, ax = plt.subplots(figsize=(10, 8))
+ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+ax.set_xlim([0.0, 1.0])
+ax.set_ylim([0.0, 1.05])
+ax.set_xlabel('False Positive Rate')
+ax.set_ylabel('True Positive Rate')
+ax.set_title('ROC Curve for all categories')
+
+# Plot ROC curve for each category
+for category in categories:
+    true_labels = all_true_labels[:, categories.index(category)]
+    predicted_labels = all_predicted_labels[:, categories.index(category)]
+    plot_roc_curve(true_labels, predicted_labels, category, ax)
+
+ax.legend(loc="lower right")
+plt.show()
+
+
+# In[52]:
+
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc
+
+# Function to plot ROC curve for each category
+def plot_roc_curve(true_labels, predicted_labels, category):
+    fpr, tpr, _ = roc_curve(true_labels, predicted_labels)
+    roc_auc = auc(fpr, tpr)
+
+    plt.figure()
+    lw = 2
+    plt.plot(fpr, tpr, color='darkorange',
+             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('ROC Curve for ' + category)
+    plt.legend(loc="lower right")
+    plt.show()
+
+# Plot ROC curve for each category
+for category in categories:
+    true_labels = all_true_labels[:, categories.index(category)]
+    predicted_labels = all_predicted_labels[:, categories.index(category)]
+    plot_roc_curve(true_labels, predicted_labels, category)
 
