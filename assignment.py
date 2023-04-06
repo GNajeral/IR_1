@@ -7,7 +7,7 @@
 
 # ### Preprocessing Phase
 
-# In[26]:
+# In[1]:
 
 
 import nltk
@@ -15,43 +15,38 @@ import nltk
 nltk.download('all')
 
 
-# In[27]:
+# In[2]:
 
 
 # Read the data
 import pandas as pd
 
-train_data = pd.read_csv('dataset/BBC News Train.csv')
-test_data = pd.read_csv('dataset/BBC News Test.csv')
-
-# Transform the data into a single dataset
-data = pd.concat([train_data,test_data])
-data.to_csv('dataset/data.csv', index=False)
+data = pd.read_csv('dataset/BBC News Train.csv')
 
 # Remove duplicated data
 data = data.drop_duplicates(subset=['Text','Category'])
 data.head(10)
 
 
-# In[28]:
+# In[3]:
 
 
 data.shape
 
 
-# In[29]:
+# In[4]:
 
 
 data.groupby(['Category']).size().sort_values(ascending=True)
 
 
-# In[30]:
+# In[5]:
 
 
 data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[31]:
+# In[6]:
 
 
 # Remove all punctuations from the text
@@ -64,7 +59,7 @@ data['removed_punc'] = data['Text'].apply(lambda x: remove_punct(x))
 data.head()
 
 
-# In[32]:
+# In[7]:
 
 
 # Convert text to lower case tokens
@@ -78,7 +73,7 @@ data['tokens'] = data['removed_punc'].apply(lambda msg : tokenize(msg))
 data.head()
 
 
-# In[33]:
+# In[8]:
 
 
 # Remove tokens of length less than 3
@@ -89,7 +84,7 @@ data['larger_tokens'] = data['tokens'].apply(lambda x : remove_small_words(x))
 data.head()
 
 
-# In[34]:
+# In[9]:
 
 
 # Remove stopwords by using NLTK corpus list
@@ -100,7 +95,7 @@ data['clean_tokens'] = data['larger_tokens'].apply(lambda x : remove_stopwords(x
 data.head()
 
 
-# In[35]:
+# In[10]:
 
 
 # Apply lemmatization on tokens
@@ -114,7 +109,7 @@ data['lemma_words'] = data['clean_tokens'].apply(lambda x : lemmatize(x))
 data.head()
 
 
-# In[36]:
+# In[11]:
 
 
 # Create sentences to get clean text as input for vectors
@@ -125,9 +120,9 @@ data['clean_text'] = data['lemma_words'].apply(lambda x : return_sentences(x))
 data.head()
 
 
-# ### User's Creation and Documents' Encoding
+# ### Profile's Creation and Documents' Encoding
 
-# In[37]:
+# In[12]:
 
 
 # Balancing the dataset to have the same number of documents for each query
@@ -147,7 +142,7 @@ def balance_data(data, category_col):
     return pd.concat(balanced_data)
 
 
-# In[38]:
+# In[13]:
 
 
 data = balance_data(data, 'Category')
@@ -155,74 +150,75 @@ balanced_data = data[['clean_text', 'Category']]
 balanced_data.groupby(['Category']).size().sort_values(ascending=True)
 
 
-# In[39]:
+# In[14]:
 
 
 balanced_data.groupby(['Category']).size().sort_values(ascending=True).plot(kind='barh', figsize=(10, 6))
 
 
-# In[40]:
+# In[15]:
 
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-#vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_df=0.9, min_df=5)
-#vectorizer = TfidfVectorizer(norm='l2', use_idf=False)
+
 vectorizer = TfidfVectorizer(stop_words='english')
-document_vectors = vectorizer.fit_transform(balanced_data['clean_text'])
+documents_vec = vectorizer.fit_transform(balanced_data['clean_text'])
 
 
-# In[41]:
+# In[16]:
 
 
 topics = {
     # Sport
-    'sport': ['sport', 'game', 'year', 'first', 'player', 'world', 'england', 'time', 'play', 'match', 'team', 'side',
-              'second', 'champion', 'good', 'three', 'week', 'ireland', 'final', 'coach', 'injury', 'season', 'club',
-              'france', 'wale', 'people', 'rugby', 'open', 'great', 'nation', 'month', 'point', 'united', 'title', 
-              'minute', 'start', 'victory', 'chance', 'chelsea', 'international', 'played', 'scotland', 'best', 'home', 
-              'league', 'championship', 'five', 'olympic', 'face', 'goal', 'playing', 'record', 'arsenal', 'country',
-              'decision', 'place', 'test', 'manager', 'race', 'break', 'return', 'grand', 'beat', 'european', 'four',
-              'away', 'former', 'service', 'third'],
+    'sport': ['sport', 'match', 'champion', 'play', 'injury', 'team', 'chelsea', 'season',
+              'side', 'second', 'final', 'club', 'rugby', 'coach', 'united', 'arsenal',
+              'nation', 'robinson', 'great', 'start', 'international', 'league', 'victory',
+              'well', 'olympic', 'chance', 'race', 'minute', 'played', 'australian', 'best',
+              'mourinho', 'roddick', 'championship', 'point', 'event', 'title', 'referee',
+              'goal', 'beat', 'liverpool', 'grand', 'test', 'manager', 'ball', 'place', 'woman',
+              'winning', 'tennis', 'squad'],
     
     # Business
-    'business': ['business', 'year', 'company', 'firm', 'market', 'country', 'government', 'sale', 'bank', 'price', 
-                 'economy', 'growth', 'month', 'share', 'economic', 'world', 'rate', 'people', 'time', 'analyst', 
-                 'chief', 'first', 'deal', 'profit', 'dollar', 'rise', 'china', 'euro', 'offer', 'cost', 'plan', 
-                 'executive', 'group', 'make', 'three', 'week', 'figure', 'financial', 'minister', 'report', 
-                 'investment', 'stock', 'many', 'india', 'yukos', 'interest', 'high', 'state', 'debt', 'demand', 
-                 'european', 'well', 'trade', 'foreign', 'million', 'move', 'strong', 'director', 'president', 'good',
-                 'industry', 'number', 'quarter', 'budget', 'fall', 'former', 'news', 'work', 'money', 'need', 'investor'],
-    
+    'business': ['business', 'year', 'firm', 'company', 'rate', 'economy', 'growth', 'sale', 
+                 'market', 'bank', 'price', 'share', 'dollar', 'economic', 'country', 'government',
+                 'month', 'profit', 'figure', 'business', 'deal', 'euro', 'world', 'analyst',
+                 'trade', 'rise', 'offer', 'deficit', 'report', 'chief', 'spending', 'time',
+                 'quarter', 'financial', 'stock', 'consumer', 'high', 'executive', 'export',
+                 'investment', 'demand', 'cost', 'interest', 'job', 'shareholder', 'european',
+                 'fall', 'deutsche', 'worldcom', 'investor'],
+                 
     # Entertainment
-    'entertainment': ['entertainment', 'film', 'year', 'best', 'award', 'people', 'show', 'music', 'star', 'time', 
-                      'number', 'actor', 'band', 'director', 'world', 'album', 'like', 'company', 'sale', 'million', 
-                      'government', 'oscar', 'song', 'chart', 'home', 'record', 'movie', 'role', 'actress', 'place',
-                      'play', 'right', 'week', 'single', 'game', 'group', 'life', 'singer', 'work', 'prize', 'country',
-                      'industry', 'good', 'festival', 'nomination', 'party', 'money', 'child', 'office', 'comedy', 'rock', 
-                      'winner', 'series', 'book', 'woman', 'producer', 'news', 'love', 'performance', 'musical'],
+    'entertainment': ['entertainment', 'film', 'award', 'band', 'actor', 'star', 'album', 'oscar',
+                      'festival', 'director', 'song', 'single', 'actress', 'record', 'singer',
+                      'nomination', 'movie', 'book', 'musical', 'comedy', 'role', 'prize', 'theatre',
+                      'series', 'winner', 'rock', 'life', 'producer', 'five', 'ceremony', 'aviator',
+                      'hollywood', 'academy', 'category', 'audience', 'performance', 'drama',
+                      'starring', 'love', 'christmas', 'release', 'nominated', 'radio', 'studio',
+                      'television', 'foxx', 'success', 'industry', 'live', 'stage'],
     
     # Politics
-    'politics': ['politics', 'labour', 'people', 'government', 'party', 'election', 'year', 'blair', 'minister', 'tory',
-                 'plan', 'time', 'brown', 'lord', 'country', 'public', 'home', 'issue', 'leader', 'right', 'game', 'secretary', 
-                 'general', 'service', 'prime', 'week', 'world', 'change', 'campaign', 'like', 'conservative', 'bill', 'spokesman',
-                 'chancellor', 'police', 'report', 'child', 'claim', 'council', 'power', 'vote', 'need', 'liberal', 'democrat', 
-                 'case', 'policy', 'member', 'court', 'problem', 'european', 'group', 'former', 'house', 'help', 'local', 'system',
-                 'decision', 'school', 'kennedy', 'news', 'office', 'place', 'state'],
+    'politics': ['politics', 'labour', 'election', 'party', 'blair', 'tory', 'lord', 'minister',
+                 'plan', 'bill', 'britain', 'prime', 'leader', 'chancellor', 'public', 'kennedy',
+                 'campaign', 'police', 'issue', 'general', 'secretary', 'vote', 'conservative',
+                 'council', 'right', 'school', 'liberal', 'spokesman', 'change', 'power', 'house',
+                 'democrat', 'claim', 'budget', 'local', 'court', 'voter', 'immigration', 'policy',
+                 'member', 'tax', 'card', 'union', 'case', 'foreign', 'seat', 'political', 'poll', 
+                 'part', 'back'],
     
     # Tech
-    'tech': ['tech', 'technology', 'people', 'year', 'game', 'mobile', 'phone', 'service', 'firm', 'user', 'time', 'music', 'first',
-             'company', 'computer', 'software', 'system', 'world', 'like', 'digital', 'number', 'million', 'network', 'used', 'player',
-             'market', 'work', 'online', 'consumer', 'microsoft', 'site', 'internet', 'device', 'month', 'broadband', 'website', 'video',
-             'gadget', 'show', 'data', 'home', 'information', 'medium', 'machine', 'search', 'security', 'european', 'content', 'research',
-             'report', 'group', 'news', 'help', 'virus', 'industry', 'problem', 'email', 'mean', 'program', 'message', 'play', 'camera', 
-             'different', 'three', 'apple', 'europe', 'offer', 'sale']
+    'tech': ['tech', 'technology', 'mobile', 'phone', 'game', 'service', 'technology', 'software',
+             'broadband', 'user', 'microsoft', 'search', 'computer', 'gadget', 'site', 'virus', 'network',
+             'digital', 'system', 'email', 'online', 'player', 'security', 'machine', 'internet',
+             'program', 'device', 'video', 'blog', 'data', 'information', 'sony', 'medium', 'website',
+             'content', 'message', 'apple', 'console', 'camera', 'google', 'research', 'attack',
+             'nintendo', 'customer', 'version', 'gaming', 'window', 'speed', 'file', 'spam']
 }
 
 
-# In[42]:
+# In[17]:
 
 
-users = [
+profiles = [
     {'id': 1, 'interests': topics['sport']},
     {'id': 2, 'interests': topics['business']},
     {'id': 3, 'interests': topics['entertainment']},
@@ -236,215 +232,171 @@ users = [
 ]
 
 
-# Simple way of creating the users
-
-# In[43]:
-
-
-# user_vectors = []
-# for user in users:
-#     interests = " ".join(user['interests'])
-#     vector = vectorizer.transform([interests])
-#     user_vectors.append(vector)
-
-# lista_vecs = [user_vectors[i] for i in range(len(user_vectors))]
-
-
-# Creating the users by using the mean/max function
-
-# In[44]:
-
-
-# import numpy as np
-# from scipy.sparse import csr_matrix
-
-# def aggregate_vectors(vectors):
-#     return np.mean(vectors, axis=0)
-
-# def max_aggregate_vectors(vectors):
-#     return np.max(vectors, axis=0)
-
-# user_vectors = []
-# for user in users:
-#     topic_vectors = []
-#     for topic in user['interests']:
-#         topic_vector = vectorizer.transform([topic]).toarray()
-#         topic_vectors.append(topic_vector)
-#     user_vector = max_aggregate_vectors(topic_vectors)
-#     user_vectors.append(user_vector)
-
-# user_vectors_sparse = [csr_matrix(user_vector) for user_vector in user_vectors]
-
-# lista_vecs = user_vectors_sparse
-
-
-# #### Creating the users by using the Weighted Topic Frequency (WTF) method
+# #### Creating the profiles by using the Weighted Topic Frequency (WTF) method
 # 
-# This a creative approach for constructing user vectors that takes into account the uniqueness of each topic for the user.
+# This a creative approach for constructing profile vectors that takes into account the uniqueness of each topic for the profile.
 # 
-# 1. Calculate the term frequency (TF) for each word in the user's interests.
+# 1. Calculate the term frequency (TF) for each word in the profile's interests.
 # 2. Calculate the inverse topic frequency (ITF) for each word across all topics.
 # 3. Calculate the Weighted Topic Frequency (WTF) for each word by multiplying its TF by its ITF.
-# 4. Create the user vector by using the WTF values for each word in the user's interests.
+# 4. Create the profile vector by using the WTF values for each word in the profile's interests.
 # 
 # Here's a step-by-step explanation:
 # 
-# 1. Term Frequency (TF): Count the frequency of each word in the user's interests and normalize it by the total number of words in the user's interests.
+# 1. Term Frequency (TF): Count the frequency of each word in the profile's interests and normalize it by the total number of words in the profile's interests.
 # 
-# 2. Inverse Topic Frequency (ITF): For each word in the user's interests, calculate its presence in all topics. Then, compute the inverse of this presence (total number of topics / number of topics containing the word). This will give higher weights to words that are more unique to a user's interests.
+# 2. Inverse Topic Frequency (ITF): For each word in the profile's interests, calculate its presence in all topics. Then, compute the inverse of this presence (total number of topics / number of topics containing the word). This will give higher weights to words that are more unique to a profile's interests.
 # 
-# 3. Weighted Topic Frequency (WTF): Multiply the TF and ITF for each word to obtain the WTF value. This will emphasize words that are both frequent in the user's interests and unique to their topics.
+# 3. Weighted Topic Frequency (WTF): Multiply the TF and ITF for each word to obtain the WTF value. This will emphasize words that are both frequent in the profile's interests and unique to their topics.
 # 
-# 4. User vector creation: Use the WTF values for each word in the user's interests to create the user vector. This can be done by transforming the user's interests (with WTF values) using the vectorizer.transform() function.
+# 4. Profile vector creation: Use the WTF values for each word in the profile's interests to create the profile vector. This can be done by transforming the profile's interests (with WTF values) using the vectorizer.transform() function.
 
-# In[45]:
+# In[18]:
 
 
 import numpy as np
 from collections import Counter
 
-def calculate_tf(user_interests):
-    word_count = Counter(user_interests)
-    total_words = len(user_interests)
+def calculate_tf(profile_interests):
+    word_count = Counter(profile_interests)
+    total_words = len(profile_interests)
     tf = {word: count / total_words for word, count in word_count.items()}
     return tf
 
-def calculate_itf(user_interests, topics):
+def calculate_itf(profile_interests, topics):
     num_topics = len(topics)
-    topic_presence = {word: 0 for word in user_interests}
+    topic_presence = {word: 0 for word in profile_interests}
     
     for topic_words in topics.values():
-        for word in set(user_interests):
+        for word in set(profile_interests):
             if word in topic_words:
                 topic_presence[word] += 1
     
     itf = {word: np.log(num_topics / presence) for word, presence in topic_presence.items()}
     return itf
 
-def calculate_wtf(user_interests, topics):
-    tf = calculate_tf(user_interests)
-    itf = calculate_itf(user_interests, topics)
-    wtf = {word: tf[word] * itf[word] for word in user_interests}
+def calculate_wtf(profile_interests, topics):
+    tf = calculate_tf(profile_interests)
+    itf = calculate_itf(profile_interests, topics)
+    wtf = {word: tf[word] * itf[word] for word in profile_interests}
     return wtf
 
-user_vectors = []
-for user in users:
-    wtf = calculate_wtf(user['interests'], topics)
+profiles_vec = []
+for profile in profiles:
+    wtf = calculate_wtf(profile['interests'], topics)
     weighted_interests = " ".join([word for word, weight in wtf.items() for _ in range(int(weight * 100))])
-    user_vector = vectorizer.transform([weighted_interests])
-    user_vectors.append(user_vector)
+    profile_vec = vectorizer.transform([weighted_interests])
+    profiles_vec.append(profile_vec)
 
-lista_vecs = [user_vectors[i] for i in range(len(user_vectors))]
-
-
-# In[46]:
+profiles_list = [profiles_vec[i] for i in range(len(profiles_vec))]
 
 
-for user in lista_vecs:
-    print(user)
-
-
-# In[47]:
+# In[19]:
 
 
 from sklearn.metrics.pairwise import cosine_similarity
 
-predictions = []
-predictions2 = []
-for i in range(0, len(lista_vecs)):
-    match = 0
-    best_similarity = -1
-    for j in range(0, document_vectors.shape[0]):
-        document = document_vectors[j]
-        similarity = cosine_similarity(document, lista_vecs[i])
-        if similarity > best_similarity:
-            best_similarity = similarity
-            match = j
-    predictions.append(balanced_data.iloc[match]['Category'])
-    predictions2.append(balanced_data.iloc[match]['clean_text'])
+# Function to find the top n matches for a profile
+def find_top_n_matches(profile_vec, documents_vec, n):
+    similarities = cosine_similarity(profile_vec, documents_vec)
+    sorted_indices = np.argsort(similarities[0])[::-1]
+    return sorted_indices[:n]
 
+# Calculate the top n matches for each profile
+n = 5
+recommended_documents = []
 
-# In[48]:
-
-
-correct_predictions = 0
-for category, text, user in zip(predictions, predictions2, users):
-    print()
-    print("User: ", user['id'])
-    print("Category Predicted: ", category)
-    print("Recommended Text: ", text)
-    print("User's Interests: ", user['interests'])
-    if category == user['interests'][0]:
-        correct_predictions += 1
-
-print("\nAccuracy: ", correct_predictions/len(users))
+for profile_vec in profiles_vec:
+    top_n_indices = find_top_n_matches(profile_vec, documents_vec, n)
+    recommended_documents.append(top_n_indices)
 
 
 # ### System Evaluation
 
-# To calculate the accuracy, precision, recall, F-Measure, and AU-ROC, we'll need to modify the code to make it suitable for a multi-label classification problem. Since the user interests are not limited to one category, we'll create binary classifiers for each category and then calculate the mentioned metrics for each classifier.
-
-# In[49]:
+# In[20]:
 
 
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import accuracy_score, recall_score, f1_score, roc_auc_score, average_precision_score, coverage_error
 
 # Create binary classifiers for each category
 categories = list(topics.keys())
-category_classifiers = {category: (document_vectors, (balanced_data['Category'] == category).astype(int)) for category in categories}
+category_classifiers = {category: (documents_vec, (balanced_data['Category'] == category).astype(int)) for category in categories}
 
-# Calculate metrics for each user
+# Calculate metrics for each profile
 all_true_labels = []
-all_predicted_labels = []
+all_predicted_scores = []
 
-for user in users:
-    true_labels = [1 if interest in user['interests'] else 0 for interest in categories]
-    predicted_labels = []
+print("Profile Interests and Predicted Categories:")
+for profile, top_n_indices in zip(profiles, recommended_documents):
+    true_labels = [1 if interest in profile['interests'] else 0 for interest in categories]
+    predicted_scores = []
 
     for category in categories:
         classifier_data, category_labels = category_classifiers[category]
-        best_similarity = -1
-        match_index = -1
+        match_count = 0
 
-        for j in range(0, classifier_data.shape[0]):
-            document = classifier_data[j]
-            similarity = cosine_similarity(document, user_vectors[user['id'] - 1])
+        for idx in top_n_indices:
+            predicted_label = category_labels.iloc[idx]
+            if predicted_label == 1:
+                match_count += 1
 
-            if similarity > best_similarity:
-                best_similarity = similarity
-                match_index = j
+        predicted_scores.append(match_count / n)
 
-        predicted_label = category_labels.iloc[match_index]
-        predicted_labels.append(predicted_label)
+    print("\nProfile ID:", profile["id"])
+    print("Interests:", ', '.join(profile["interests"]))
+    print("Predicted Categories:")
+    for idx, category in enumerate(categories):
+        print(f"{category}: {predicted_scores[idx]:.2f}")
 
     all_true_labels.append(true_labels)
-    all_predicted_labels.append(predicted_labels)
+    all_predicted_scores.append(predicted_scores)
 
 all_true_labels = np.array(all_true_labels)
-all_predicted_labels = np.array(all_predicted_labels)
+all_predicted_scores = np.array(all_predicted_scores)
 
-# Calculate accuracy, precision, recall, F-Measure, and AU-ROC
-accuracy = accuracy_score(all_true_labels, all_predicted_labels)
-precision = precision_score(all_true_labels, all_predicted_labels, average='micro')
-recall = recall_score(all_true_labels, all_predicted_labels, average='micro')
-f_measure = f1_score(all_true_labels, all_predicted_labels, average='micro')
-au_roc = roc_auc_score(all_true_labels, all_predicted_labels, average='micro')
+# Calculate the number of correctly predicted samples
+correct_predictions = accuracy_score(all_true_labels, np.round(all_predicted_scores), normalize=False)
 
+# Calculate the total number of samples
+total_samples = all_true_labels.shape[0]
+
+# Calculate the accuracy
+accuracy = correct_predictions / total_samples
+
+# Calculate average precision and coverage
+average_precision = average_precision_score(all_true_labels, all_predicted_scores)
+coverage = coverage_error(all_true_labels, all_predicted_scores)
+
+# Calculate recall for multi-label classification
+recall = recall_score(all_true_labels, np.round(all_predicted_scores), average='samples')
+
+# Calculate F1-score for multi-label classification
+f1_measure = f1_score(all_true_labels, np.round(all_predicted_scores), average='samples')
+
+# Calculate AU-ROC for multi-label classification
+au_roc = roc_auc_score(all_true_labels, all_predicted_scores, average='samples')
+
+
+print("\nEvaluation Metrics:")
 print("Accuracy: ", accuracy)
-print("Precision: ", precision)
+print("Precision: ", average_precision)
 print("Recall: ", recall)
-print("F-Measure: ", f_measure)
+print("F1-Measure: ", f1_measure)
 print("AU-ROC: ", au_roc)
+print("Coverage Error: ", coverage)
 
 
-# In[50]:
+# In[21]:
 
 
 from sklearn.metrics import classification_report, multilabel_confusion_matrix
 
+# Round the predicted scores to the nearest integer (0 or 1)
+rounded_predicted_labels = np.round(all_predicted_scores)
+
 # Calculate classification report and confusion matrix
-class_report = classification_report(all_true_labels, all_predicted_labels, target_names=categories, zero_division=0)
-conf_matrix = multilabel_confusion_matrix(all_true_labels, all_predicted_labels)
+class_report = classification_report(all_true_labels, rounded_predicted_labels, target_names=categories, zero_division=0)
+conf_matrix = multilabel_confusion_matrix(all_true_labels, rounded_predicted_labels)
 
 print("Classification Report:\n", class_report)
 print("Confusion Matrix:\n")
@@ -455,7 +407,7 @@ for i, category in enumerate(categories):
     print()
 
 
-# In[51]:
+# In[22]:
 
 
 import matplotlib.pyplot as plt
@@ -481,40 +433,125 @@ ax.set_title('ROC Curve for all categories')
 # Plot ROC curve for each category
 for category in categories:
     true_labels = all_true_labels[:, categories.index(category)]
-    predicted_labels = all_predicted_labels[:, categories.index(category)]
-    plot_roc_curve(true_labels, predicted_labels, category, ax)
+    predicted_scores = all_predicted_scores[:, categories.index(category)]
+    plot_roc_curve(true_labels, predicted_scores, category, ax)
 
 ax.legend(loc="lower right")
 plt.show()
 
 
-# In[52]:
+# ### Model Creation Phase
+
+# In[23]:
 
 
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
+from sklearn.model_selection import train_test_split
 
-# Function to plot ROC curve for each category
-def plot_roc_curve(true_labels, predicted_labels, category):
-    fpr, tpr, _ = roc_curve(true_labels, predicted_labels)
-    roc_auc = auc(fpr, tpr)
+X_train, X_test, y_train, y_test = train_test_split(balanced_data['clean_text'], balanced_data['Category'], test_size=0.2, random_state=42)
 
-    plt.figure()
-    lw = 2
-    plt.plot(fpr, tpr, color='darkorange',
-             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
-    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('ROC Curve for ' + category)
-    plt.legend(loc="lower right")
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+
+# In[24]:
+
+
+from sklearn.metrics import confusion_matrix
+
+def train_and_evaluate(classifier, X_train_vec, y_train, X_test_vec, y_test):
+    classifier.fit(X_train_vec, y_train)
+    y_pred = classifier.predict(X_test_vec)
+    accuracy = accuracy_score(y_test, y_pred)
+    classification_report_dict = classification_report(y_test, y_pred, output_dict=True)
+    
+    print(classifier.__class__.__name__)
+    print("Accuracy:", accuracy)
+    print("Classification Report:\n", classification_report(y_test, y_pred))
+    print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+    print("\n")
+    
+    performance = {
+        "accuracy": accuracy,
+        "precision": classification_report_dict["macro avg"]["precision"],
+        "recall": classification_report_dict["macro avg"]["recall"],
+        "f1_score": classification_report_dict["macro avg"]["f1-score"],
+    }
+    
+    return performance
+
+
+# In[25]:
+
+
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+
+performance_metrics = {}
+
+classifiers = [
+    MultinomialNB(),
+    LogisticRegression(),
+    LinearSVC(),
+    RandomForestClassifier(),
+    KNeighborsClassifier()
+]
+
+
+for classifier in classifiers:
+    performance_metrics[classifier.__class__.__name__] = train_and_evaluate(classifier, X_train_vec, y_train, X_test_vec, y_test)
+
+
+# In[26]:
+
+
+for classifier, metrics in performance_metrics.items():
+    print(f"{classifier}:")
+    for metric, value in metrics.items():
+        print(f"  {metric}: {value:.4f}")
+    print("\n")
+
+
+# In[27]:
+
+
+from sklearn.model_selection import cross_val_score
+
+def evaluate_with_cross_val(classifier, X, y, n_splits=5):
+    scores = cross_val_score(classifier, X, y, cv=n_splits)
+    return np.mean(scores)
+
+X_vec = vectorizer.fit_transform(data['clean_text'])
+y = data['Category']
+
+for classifier in classifiers:
+    mean_score = evaluate_with_cross_val(classifier, X_vec, y)
+    print(f"{classifier.__class__.__name__}: {mean_score:.4f}")
+
+
+# In[28]:
+
+
+import seaborn as sns
+
+def plot_cm(y_true, y_pred, class_names):
+    cm = confusion_matrix(y_true, y_pred)
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    plt.figure(figsize=(8, 8))
+    sns.heatmap(cm_normalized, annot=True, cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
     plt.show()
 
-# Plot ROC curve for each category
-for category in categories:
-    true_labels = all_true_labels[:, categories.index(category)]
-    predicted_labels = all_predicted_labels[:, categories.index(category)]
-    plot_roc_curve(true_labels, predicted_labels, category)
+class_names = data['Category'].unique()
+
+for classifier in classifiers:
+    classifier.fit(X_train_vec, y_train)
+    y_pred = classifier.predict(X_test_vec)
+    print(f"Confusion Matrix for {classifier.__class__.__name__}:")
+    plot_cm(y_test, y_pred, class_names)
 
